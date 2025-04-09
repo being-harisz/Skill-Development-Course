@@ -1,0 +1,40 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.metrics import silhouette_score
+
+# Generate synthetic data with some anomalies
+np.random.seed(42)
+n_samples = 300
+n_features = 2
+n_clusters = 4
+X, _ = make_blobs(n_samples=n_samples, n_features=n_features, centers=n_clusters, cluster_std=1.2, random_state=42)
+
+# Introduce anomalies
+num_anomalies = 10
+anomalies = np.random.uniform(low=-10, high=10, size=(num_anomalies, n_features))
+X = np.vstack([X, anomalies])
+
+# Apply K-Means Clustering
+kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+kmeans.fit(X)
+labels = kmeans.labels_
+centroids = kmeans.cluster_centers_
+
+# Compute distances from cluster centers
+distances = np.min(np.linalg.norm(X[:, np.newaxis] - centroids, axis=2), axis=1)
+threshold = np.percentile(distances, 95)  # Define anomaly threshold
+anomaly_indices = np.where(distances > threshold)[0]
+
+# Plot the results
+plt.figure(figsize=(8, 6))
+for i in range(n_clusters):
+    plt.scatter(X[labels == i, 0], X[labels == i, 1], label=f'Cluster {i+1}')
+plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='x', s=200, label='Centroids')
+plt.scatter(X[anomaly_indices, 0], X[anomaly_indices, 1], c='black', marker='o', s=100, label='Anomalies', edgecolors='white')
+plt.legend()
+plt.title("K-Means Clustering with Anomaly Detection")
+plt.xlabel("Feature 1")
+plt.ylabel("Feature 2")
+plt.show()
