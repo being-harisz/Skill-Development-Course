@@ -1,0 +1,65 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import gradio as gr
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.metrics import silhouette_score
+
+# Install Gradio if not available
+try:
+    import gradio
+except ModuleNotFoundError:
+    import os
+    os.system('pip install gradio')
+    import gradio as gr
+
+# Function to perform K-Means clustering and detect anomalies
+def kmeans_clustering(n_clusters):
+    np.random.seed(42)
+    n_samples = 300
+    n_features = 2
+
+    # Generate synthetic data
+    X, _ = make_blobs(n_samples=n_samples, n_features=n_features, centers=n_clusters, cluster_std=1.2, random_state=42)
+
+    # Introduce anomalies
+    num_anomalies = 10
+    anomalies = np.random.uniform(low=-10, high=10, size=(num_anomalies, n_features))
+    X = np.vstack([X, anomalies])
+
+    # Apply K-Means Clustering
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    kmeans.fit(X)
+    labels = kmeans.labels_
+    centroids = kmeans.cluster_centers_
+
+    # Compute distances from cluster centers
+    distances = np.min(np.linalg.norm(X[:, np.newaxis] - centroids, axis=2), axis=1)
+    threshold = np.percentile(distances, 95)  # Define anomaly threshold
+    anomaly_indices = np.where(distances > threshold)[0]
+
+    # Plot the results
+    plt.figure(figsize=(8, 6))
+    for i in range(n_clusters):
+        plt.scatter(X[labels == i, 0], X[labels == i, 1], label=f'Cluster {i+1}')
+    plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='x', s=200, label='Centroids')
+    plt.scatter(X[anomaly_indices, 0], X[anomaly_indices, 1], c='black', marker='o', s=100, label='Anomalies', edgecolors='white')
+    plt.legend()
+    plt.title("K-Means Clustering with Anomaly Detection")
+    plt.xlabel("Feature 1")
+    plt.ylabel("Feature 2")
+    plt.savefig("clustering_result.png")
+    plt.close()
+
+    return "clustering_result.png"
+
+# Create Gradio interface
+iface = gr.Interface(
+    fn=kmeans_clustering,
+    inputs=gr.Slider(2, 10, step=1, label="Number of Clusters"),
+    outputs=gr.Image(type="filepath"),
+    title="K-Means Clustering with Anomaly Detection",
+    description="Adjust the number of clusters and observe the clustering results with anomaly detection."
+)
+
+iface.launch()
