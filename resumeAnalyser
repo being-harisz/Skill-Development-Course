@@ -1,0 +1,51 @@
+# Install necessary libraries
+!pip install langchain openai
+
+# Import necessary libraries
+import openai
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+
+# Set OpenAI API key (replace with your OpenAI API key)
+openai.api_key = "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"
+
+# Define the resume analysis prompt template
+resume_analysis_prompt = """
+Analyze the following resume and provide feedback on how to improve it. Suggest improvements in terms of skills, experience, education, formatting, and overall presentation:
+
+Resume: {resume}
+"""
+
+# Function to analyze the resume using LangChain and OpenAI
+def analyze_resume(resume_text):
+    # Set up the prompt with the resume text to analyze
+    prompt = PromptTemplate(input_variables=["resume"], template=resume_analysis_prompt)
+    
+    # Create an LLM chain using OpenAI as the language model
+    llm = ChatOpenAI(temperature=0.5)
+    chain = LLMChain(prompt=prompt, llm=llm)
+    
+    # Run the chain to get the analysis and suggestions
+    analysis = chain.run({"resume": resume_text})
+    
+    return analysis
+
+# Function for real-time resume analysis (interactive mode)
+def real_time_resume_analysis():
+    print("Welcome to the Resume Analyzer!")
+    while True:
+        # Get input from user (resume text)
+        resume = input("Enter the resume text (or type 'exit' to quit): ")
+        if resume.lower() == 'exit':
+            print("Goodbye!")
+            break
+        
+        # Get the analysis and suggestions for the resume using LangChain
+        analysis = analyze_resume(resume)
+        
+        # Display the analysis and suggestions
+        print(f"Resume Analysis and Suggestions: {analysis}\n")
+
+# Uncomment the following line to run real-time resume analysis
+# real_time_resume_analysis()
