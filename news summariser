@@ -1,0 +1,68 @@
+!pip install -q langchain langchain-openai gradio PyMuPDF newspaper3k tiktoken
+import os
+
+# Replace with your actual OpenAI API key
+os.environ["OPENAI_API_KEY"] = "sk-..."  # Your OpenAI API Key here
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+
+# Create LCEL Chain
+llm = ChatOpenAI(temperature=0.3)
+prompt = ChatPromptTemplate.from_template(
+    """
+You are a professional news summarizer. Summarize the following article in 3-5 bullet points:
+
+{text}
+
+Summary:
+"""
+)
+chain = prompt | llm
+import fitz  # PyMuPDF
+from newspaper import Article
+
+def extract_text_from_pdf(file):
+    doc = fitz.open(stream=file.read(), filetype="pdf")
+    return "\n".join(page.get_text() for page in doc)
+
+def extract_text_from_url(url):
+    article = Article(url)
+    article.download()
+    article.parse()
+    return article.text
+import gradio as gr
+
+def summarize_news(article_text="", pdf_file=None, url=""):
+    try:
+        if pdf_file is not None:
+            article_text = extract_text_from_pdf(pdf_file)
+        elif url.strip():
+            article_text = extract_text_from_url(url)
+
+        if not article_text.strip():
+            return "❗ Please provide a valid article text, PDF, or URL."
+
+        # Directly invoke the model to get the summary
+        result = chain.invoke({"text": article_text})
+        return result
+
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+with gr.Blocks() as demo:
+    gr.Markdown("## 📰 News Summarizer using LangChain + LCEL")
+    with gr.Row():
+        article_input = gr.Textbox(label="Paste Article Text", lines=10, placeholder="Or upload PDF / enter URL below...")
+    with gr.Row():
+        pdf_input = gr.File(label="Upload PDF", file_types=[".pdf"])
+        url_input = gr.Textbox(label="News Article URL")
+    summarize_btn = gr.Button("Summarize")
+    output = gr.Textbox(label="Summary Output", lines=10)
+
+    summarize_btn.click(
+        summarize_news,
+        inputs=[article_input, pdf_input, url_input],
+        outputs=[output]
+    )
+
+demo.launch()
